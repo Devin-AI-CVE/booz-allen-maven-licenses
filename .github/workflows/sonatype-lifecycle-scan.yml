@@ -1,0 +1,36 @@
+name: Sonatype Lifecycle Scan
+on:
+  push:
+    branches:
+      - dev
+  pull_request:
+    branches:
+      - dev
+
+jobs:
+  sonatype-lifecycle-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Sonatype Lifecycle Evaluation
+        id: evaluate
+        uses: sonatype/actions/evaluate@v1
+        with:
+          iq-server-url: https://test-iqserver.bah.com
+          username: ${{ secrets.SONATYPE_USERNAME }}
+          password: ${{ secrets.SONATYPE_PASSWORD }}
+          application-id: ${{ github.event.repository.name }}__${{ github.repository_owner }}
+          scan-targets: pom.xml
+          upload-sarif-file: true
+
+      - name: Log evaluate action output
+        if: always()
+        run: |
+          echo "Scan ID: ${{ steps.evaluate.outputs.scan-id }}"
+          echo "Report URL: ${{ steps.evaluate.outputs.report-url }}"
