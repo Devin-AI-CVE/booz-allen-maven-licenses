@@ -60,15 +60,25 @@ jobs:
           gpg-passphrase: GPG_PASSPHRASE
 
       - name: Create settings.xml
+        env:
+          SONATYPE_USER: ${{ secrets.SONATYPE_CENTRAL_REPO_TOKEN_USER }}
+          SONATYPE_KEY: ${{ secrets.SONATYPE_CENTRAL_REPO_TOKEN_KEY }}
+          GHCR_USER: ${{ secrets.GHCR_IO_USERNAME }}
+          GHCR_TOKEN: ${{ secrets.GHCR_IO_TOKEN }}
+          PYPI_USER: ${{ secrets.PYPI_USERNAME }}
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
         run: |
-          echo "<settings><servers><server><id>central</id><username>${{ secrets.SONATYPE_CENTRAL_REPO_TOKEN_USER }}</username><password>${{ secrets.SONATYPE_CENTRAL_REPO_TOKEN_KEY }}</password></server><server><id>ghcr.io</id><username>${{ secrets.GHCR_IO_USERNAME }}</username><password>${{ secrets.GHCR_IO_TOKEN }}</password></server><server><id>pypi</id><username>${{ secrets.PYPI_USERNAME }}</username><password>${{ secrets.PYPI_TOKEN }}</password></server></servers></settings>" > $HOME/.m2/settings.xml
+          echo "<settings><servers><server><id>central</id><username>${SONATYPE_USER}</username><password>${SONATYPE_KEY}</password></server><server><id>ghcr.io</id><username>${GHCR_USER}</username><password>${GHCR_TOKEN}</password></server><server><id>pypi</id><username>${PYPI_USER}</username><password>${PYPI_TOKEN}</password></server></servers></settings>" > $HOME/.m2/settings.xml
 
       - name: Release Booz Allen Licenses
+        env:
+          RELEASE_VERSION: ${{ inputs.releaseVersion }}
+          DEV_VERSION: ${{ inputs.developmentVersion }}
         run: |
           git config --local user.email "aissemble-noreply@bah.com"
           git config --local user.name "Github Actions"
-          git checkout -b ${{ inputs.releaseVersion }}-release
-          mvn -B release:clean release:prepare release:perform -Pcentral-release -DreleaseVersion=${{ inputs.releaseVersion }} -DdevelopmentVersion=${{ inputs.developmentVersion }} -Darguments="-Dhabushu.usePyenv=false"
-          mvn release:update-versions -DdevelopmentVersion=${{ inputs.developmentVersion }}
+          git checkout -b "${RELEASE_VERSION}-release"
+          mvn -B release:clean release:prepare release:perform -Pcentral-release -DreleaseVersion="${RELEASE_VERSION}" -DdevelopmentVersion="${DEV_VERSION}" -Darguments="-Dhabushu.usePyenv=false"
+          mvn release:update-versions -DdevelopmentVersion="${DEV_VERSION}"
           mvn clean install -Dhabushu.usePyenv=false
-          mvn scm:checkin -Dmessage=":arrow_up: push example modules to version ${{ inputs.developmentVersion }}"
+          mvn scm:checkin -Dmessage=":arrow_up: push example modules to version ${DEV_VERSION}"
